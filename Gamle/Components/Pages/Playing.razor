@@ -1,0 +1,170 @@
+﻿@page "/playing"
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+
+<PageTitle>Gamle</PageTitle>
+
+<head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script>
+        function logToConsole(message) {
+            console.log(message);
+        }
+    </script>
+</head>
+
+<div class="container-fluid d-block">
+    <div class="container">
+        <h1 class="display-1"><strong>Gamle</strong></h1>
+        <div class="row">
+            <div class="col-md-6 d-flex">
+                <div class="form-floating flex-grow-1">
+                    <input class="form-control" list="datalistOptions" placeholder="" @bind="inputText" @oninput="UpdateInput" />
+                    <label class="form-label">Search</label>
+                    <datalist id="datalistOptions">
+                        @if (resultsFromSearch != null && resultsFromSearch.results != null)
+                        {
+                            @foreach (var item in resultsFromSearch.results)
+                            {
+                                <option value="@item.name"></option>
+                            }
+                        } else {
+                            <option value="No results found"></option>
+                        }
+                    </datalist>
+                </div>
+                <button class="btn btn-outline-primary btn-lg ms-2" @onclick="checkIfGameExistsInOptions">Submit Guess</button>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="row guess-counter">
+            <div class="col-md-6">
+                <h6>Guess @currentCount of 10</h6>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+                <h6>Image</h6>
+            </div>
+            <div class="col-md-3">
+                <h6>Name</h6>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <h6>Release Year</h6>
+            </div>
+            <div class="col-md-2">
+                <h6>Rating</h6>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2">
+                <h6>Publisher</h6>
+            </div>
+            <div class="col-md-4">
+                <h6>Genre</h6>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Platforms</h6>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    public HttpClient httpClient = new();
+    private string? apiKey;
+
+    public int currentCount = 0;
+    public string? inputText;
+
+    public class searchResult {
+        public string? error { get; set; }
+        public int statusCode { get; set; }
+        public List<GameResult>? results { get; set; }
+    }
+
+    public class GameResult {
+        public string? name { get; set; }
+        public string? resourceType { get; set; }
+    }
+
+    public searchResult? resultsFromSearch;
+    public Timer? _debounceTimer;
+
+    protected override void OnInitialized()
+    {
+        apiKey = Environment.GetEnvironmentVariable("API_KEY");
+    }
+
+    public async Task UpdateInput(ChangeEventArgs e)
+    {
+        inputText = e.Value.ToString();
+        _debounceTimer?.Dispose();
+        _debounceTimer = new Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                await GetGames();
+                StateHasChanged();
+            });
+        }, null, 500, Timeout.Infinite);
+    }
+
+    public async Task checkIfGameExistsInOptions()
+    {
+        if (resultsFromSearch != null) {
+            var storedResults = resultsFromSearch.results;
+            var storedInput = inputText;
+            await JS.InvokeVoidAsync("logToConsole", resultsFromSearch.results);
+            await JS.InvokeVoidAsync("logToConsole", inputText);
+
+            foreach (var item in storedResults) {
+                if (item.name.ToLower() == storedInput.ToLower()) {
+                    await JS.InvokeVoidAsync("logToConsole", "FOUND");
+                    @* TODO: Call Method to display game with info *@
+                    break;
+                } else {
+                    @* TODO: Make an Alert that says invalid game, use the options to select a game *@
+                    await JS.InvokeVoidAsync("logToConsole", "NOT FOUND");
+                }
+            }
+        } else {
+            await JS.InvokeVoidAsync("logToConsole", "results: null");
+        }
+    }
+
+    public void IncrementCount()
+    {
+        currentCount++;
+    }
+
+    public async Task GetGames() {
+
+        try {
+            await JS.InvokeVoidAsync("logToConsole", "InputText:" + inputText);
+            if (!string.IsNullOrEmpty(inputText)) {
+                var request = new HttpRequestMessage(HttpMethod.Get, $"https://www.giantbomb.com/api/search/?api_key={apiKey}&format=json&limit=5&resources=game&query={inputText}&field_list=name");
+                request.Headers.Add("User-Agent", "Gamle");
+                var response = await httpClient.SendAsync(request);
+                resultsFromSearch = await response.Content.ReadFromJsonAsync<searchResult>();
+            }
+
+
+            await JS.InvokeVoidAsync("logToConsole", resultsFromSearch);
+            
+        } catch (Exception e) {
+            await JS.InvokeVoidAsync("logToConsole", e.Message);
+            return;
+        }
+    }
+
+    public void guessGame()
+    {
+        currentCount++;
+    }
+}

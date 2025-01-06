@@ -1,0 +1,21 @@
+# .gitignore for .NET projects
+
+# Ignore build output directories
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.log
+*.lock
+*.vspscc
+*.env
+Properties/launchSettings.json
+
+# Visual Studio Code settings
+.vscode/
+.vs/
+
+# Other files
+*.DS_Store
