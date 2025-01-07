@@ -13,11 +13,11 @@
     </script>
 </head>
 
-<div class="container-fluid d-block">
+<div class="container-fluid d-block" data-bs-theme="dark">
     <div class="container">
         <h1 class="display-1"><strong>Gamle</strong></h1>
         <div class="row">
-            <div class="col-md-6 d-flex">
+            <div class="col-md-6 d-flex align-items-center">
                 <div class="form-floating flex-grow-1">
                     <input class="form-control" list="datalistOptions" placeholder="" @bind="inputText" @oninput="UpdateInput" />
                     <label class="form-label">Search</label>
@@ -33,7 +33,15 @@
                         }
                     </datalist>
                 </div>
-                <button class="btn btn-outline-primary btn-lg ms-2" @onclick="checkIfGameExistsInOptions">Submit Guess</button>
+                <button class="btn btn-outline-primary btn-lg ms-2" @onclick="checkIfGameExistsInOptions">Submit</button>
+            </div>
+        </div>
+        <div class="@alertIsVisible">
+            <div class="col-md-6">
+                <div class="alert alert-danger" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill"/> 
+                    Invalid Game, use the search options to select a game
+                </div>
             </div>
         </div>
     </div>
@@ -81,6 +89,7 @@
 
     public int currentCount = 0;
     public string? inputText;
+    public string alertIsVisible = "row d-none";
 
     public class searchResult {
         public string? error { get; set; }
@@ -99,6 +108,8 @@
     protected override void OnInitialized()
     {
         apiKey = Environment.GetEnvironmentVariable("API_KEY");
+
+        @* TODO: Add code to get a random game and store it *@
     }
 
     public async Task UpdateInput(ChangeEventArgs e)
@@ -126,21 +137,18 @@
             foreach (var item in storedResults) {
                 if (item.name.ToLower() == storedInput.ToLower()) {
                     await JS.InvokeVoidAsync("logToConsole", "FOUND");
-                    @* TODO: Call Method to display game with info *@
+                    DisplayInvalidGameError(false);
+                    CompareGuessToGame(storedInput);
                     break;
                 } else {
-                    @* TODO: Make an Alert that says invalid game, use the options to select a game *@
+                    DisplayInvalidGameError(true);
                     await JS.InvokeVoidAsync("logToConsole", "NOT FOUND");
+                    break;
                 }
             }
         } else {
             await JS.InvokeVoidAsync("logToConsole", "results: null");
         }
-    }
-
-    public void IncrementCount()
-    {
-        currentCount++;
     }
 
     public async Task GetGames() {
@@ -163,8 +171,21 @@
         }
     }
 
-    public void guessGame()
+    public void  DisplayInvalidGameError(Boolean displayError) {
+        if (displayError) {
+            alertIsVisible = "row";
+        } else {
+            alertIsVisible = "row d-none";
+        }
+    }
+
+    public void CompareGuessToGame(string gameGuess)
     {
         currentCount++;
+        if (currentCount > 10) {
+            @* TODO: Add code to show user lost the game and display correct game*@
+        } else {
+            @* TODO: Add code to compare the games and display results *@
+        }
     }
 }
