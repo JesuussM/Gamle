@@ -6,6 +6,7 @@
 
 <head>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    @* ! Delete all occurences of logToConsole when no longer needed *@
     <script>
         function logToConsole(message) {
             console.log(message);
@@ -39,8 +40,8 @@
         <div class="@alertIsVisible">
             <div class="col-md-6">
                 <div class="alert alert-danger" role="alert">
-                    <i class="bi bi-exclamation-triangle-fill"/> 
-                    Invalid Game, use the search options to select a game
+                    <i class="bi bi-@iconError"/> 
+                    @messageError
                 </div>
             </div>
         </div>
@@ -84,12 +85,57 @@
 </div>
 
 @code {
+    // Variables
     public HttpClient httpClient = new();
     private string? apiKey;
-
+    private bool _isInitialized;
+    Random random = new();
+    public randomGameResults? randomGame;
     public int currentCount = 0;
     public string? inputText;
+    public string iconError = "emoji-frown";
+    public string messageError = "Something went wrong";
     public string alertIsVisible = "row d-none";
+    public searchResult? resultsFromSearch;
+    public Timer? _debounceTimer;
+
+    // Classes used to store results from API calls
+    public class randomGameResults {
+        public string? deck { get; set; }
+        public string? id { get; set; }
+        public Image? image { get; set; }
+        public string? name { get; set; }
+        public string? rating { get; set; }
+        public string? releaseDate { get; set; }
+        public List<Platform>? platforms { get; set; }
+        public string? url { get; set; }
+        public List<Genre>? genres { get; set; }
+        public List<Publisher>? publishers { get; set; }
+        public List<Review>? reviews { get; set; }
+        
+        public string? error {get; set;}
+    }
+
+    public class Image {
+        public string? original { get; set; }
+    }
+
+    public class Platform {
+        public string? name { get; set; }
+        public string? abbreviation { get; set; }
+    }
+
+    public class Genre {
+        public string? name { get; set; }
+    }
+
+    public class Publisher {
+        public string? name { get; set; }
+    }
+
+    public class Review {
+        public string? id { get; set; }
+    }
 
     public class searchResult {
         public string? error { get; set; }
@@ -102,14 +148,55 @@
         public string? resourceType { get; set; }
     }
 
-    public searchResult? resultsFromSearch;
-    public Timer? _debounceTimer;
-
+    // Methods
     protected override void OnInitialized()
     {
         apiKey = Environment.GetEnvironmentVariable("API_KEY");
+    }
 
-        @* TODO: Add code to get a random game and store it *@
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_isInitialized)
+        {
+            _isInitialized = true;
+            await GetRandomGame();
+        }
+    }
+
+    public async Task GetRandomGame() {
+        @* TODO: Add something to indicate it is loading and disable search and submit*@
+        @* ? Maybe investigate filtering the api to reduce the wait and avoiding rate limit*@
+        int randomGameId = random.Next(1, 92400);
+        await JS.InvokeVoidAsync("logToConsole", randomGameId);
+
+        try {
+            var request = new HttpRequestMessage(HttpMethod.Get, $"https://www.giantbomb.com/api/game/{randomGameId}/?api_key={apiKey}&format=json&field_list=deck,image,name,platforms,site_detail_url,publishers,genres,guid,original_game_rating,original_release_date,reviews");
+            request.Headers.Add("User-Agent", "Gamle");
+            var response = await httpClient.SendAsync(request);
+            randomGame = await response.Content.ReadFromJsonAsync<randomGameResults>();
+
+            if (randomGame.error != null) {
+                DisplayError(true, "emoji-frown", randomGame.error);
+                await JS.InvokeVoidAsync("logToConsole", randomGame.error);
+                return;
+            }
+            
+            DisplayError(false, "", "");
+        } catch(Exception e) {
+            DisplayError(true, "emoji-frown", "Error retreving game, Please try again later.");
+            await JS.InvokeVoidAsync("logToConsole", e.Message);
+            return;
+        }
+
+
+        if (randomGame.reviews == null) {
+            await JS.InvokeVoidAsync("logToConsole", randomGame.name);
+            await JS.InvokeVoidAsync("logToConsole", " has no reviews, rerolling");
+            await GetRandomGame();
+        } else {
+            await JS.InvokeVoidAsync("logToConsole", randomGame.name);
+            await JS.InvokeVoidAsync("logToConsole", randomGame.id);
+        }
     }
 
     public async Task UpdateInput(ChangeEventArgs e)
@@ -137,13 +224,12 @@
             foreach (var item in storedResults) {
                 if (item.name.ToLower() == storedInput.ToLower()) {
                     await JS.InvokeVoidAsync("logToConsole", "FOUND");
-                    DisplayInvalidGameError(false);
+                    DisplayError(false, "", "");
                     CompareGuessToGame(storedInput);
                     break;
                 } else {
-                    DisplayInvalidGameError(true);
+                    DisplayError(true, "exclamation-triangle-fill", "Invalid Game, use the search options to select a game");
                     await JS.InvokeVoidAsync("logToConsole", "NOT FOUND");
-                    break;
                 }
             }
         } else {
@@ -171,9 +257,11 @@
         }
     }
 
-    public void  DisplayInvalidGameError(Boolean displayError) {
+    public void  DisplayError(Boolean displayError, string icon, string message) {
         if (displayError) {
             alertIsVisible = "row";
+            iconError = icon;
+            messageError = message;
         } else {
             alertIsVisible = "row d-none";
         }
