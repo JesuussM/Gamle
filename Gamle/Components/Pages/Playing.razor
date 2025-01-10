@@ -1,6 +1,7 @@
 ﻿@page "/playing"
 @rendermode InteractiveServer
 @inject IJSRuntime JS
+@using Gamle.Components.Data
 
 <PageTitle>Gamle</PageTitle>
 
@@ -20,7 +21,8 @@
         <div class="row">
             <div class="col-md-6 d-flex align-items-center">
                 <div class="form-floating flex-grow-1">
-                    <input class="form-control" list="datalistOptions" placeholder="" @bind="inputText" @oninput="UpdateInput" />
+                    <input class="form-control" list="datalistOptions" placeholder="" @bind="inputText"
+                        @oninput="UpdateInput" />
                     <label class="form-label">Search</label>
                     <datalist id="datalistOptions">
                         @if (resultsFromSearch != null && resultsFromSearch.results != null)
@@ -29,18 +31,21 @@
                             {
                                 <option value="@item.name"></option>
                             }
-                        } else {
+                        }
+                        else
+                        {
                             <option value="No results found"></option>
                         }
                     </datalist>
                 </div>
-                <button class="btn btn-outline-primary btn-lg ms-2" @onclick="checkIfGameExistsInOptions">Submit</button>
+                <button class="btn btn-outline-primary btn-lg ms-2"
+                    @onclick="checkIfGameExistsInOptions">Submit</button>
             </div>
         </div>
         <div class="@alertIsVisible">
             <div class="col-md-6">
                 <div class="alert alert-danger" role="alert">
-                    <i class="bi bi-@iconError"/> 
+                    <i class="bi bi-@iconError" />
                     @messageError
                 </div>
             </div>
@@ -84,13 +89,14 @@
     </div>
 </div>
 
+
 @code {
     // Variables
     public HttpClient httpClient = new();
     private string? apiKey;
     private bool _isInitialized;
     Random random = new();
-    public randomGameResults? randomGame;
+    public GameResult? randomGame;
     public int currentCount = 0;
     public string? inputText;
     public string iconError = "emoji-frown";
@@ -100,50 +106,61 @@
     public Timer? _debounceTimer;
 
     // Classes used to store results from API calls
-    public class randomGameResults {
-        public string? deck { get; set; }
-        public string? id { get; set; }
-        public Image? image { get; set; }
-        public string? name { get; set; }
-        public string? rating { get; set; }
-        public string? releaseDate { get; set; }
-        public List<Platform>? platforms { get; set; }
-        public string? url { get; set; }
-        public List<Genre>? genres { get; set; }
-        public List<Publisher>? publishers { get; set; }
-        public List<Review>? reviews { get; set; }
-        
-        public string? error {get; set;}
+    public class GameResult
+    {
+        public string error { get; set; }
+        public Results results { get; set; }
     }
 
-    public class Image {
-        public string? original { get; set; }
+    public class Results
+    {
+        public string deck { get; set; }
+        public string guid { get; set; }
+        public Image image { get; set; }
+        public string name { get; set; }
+        public List<OriginalGameRating> original_game_rating { get; set; }
+        public string original_release_date { get; set; }
+        public List<Platform> platforms { get; set; }
+        public string site_detail_url { get; set; }
+        public List<Genre> genres { get; set; }
+        public List<Publisher> publishers { get; set; }
     }
 
-    public class Platform {
-        public string? name { get; set; }
-        public string? abbreviation { get; set; }
+    public class Image
+    {
+        public string original_url { get; set; }
     }
 
-    public class Genre {
-        public string? name { get; set; }
+    public class OriginalGameRating
+    {
+        public int id { get; set; }
+        public string name { get; set; }
     }
 
-    public class Publisher {
-        public string? name { get; set; }
+    public class Platform
+    {
+        public string abbreviation { get; set; }
     }
 
-    public class Review {
-        public string? id { get; set; }
+    public class Genre
+    {
+        public string name { get; set; }
     }
 
-    public class searchResult {
+    public class Publisher
+    {
+        public string name { get; set; }
+    }
+
+    public class searchResult
+    {
         public string? error { get; set; }
         public int statusCode { get; set; }
-        public List<GameResult>? results { get; set; }
+        public List<SearchGameResult>? results { get; set; }
     }
 
-    public class GameResult {
+    public class SearchGameResult
+    {
         public string? name { get; set; }
         public string? resourceType { get; set; }
     }
@@ -163,39 +180,38 @@
         }
     }
 
-    public async Task GetRandomGame() {
-        @* TODO: Add something to indicate it is loading and disable search and submit*@
-        @* ? Maybe investigate filtering the api to reduce the wait and avoiding rate limit*@
-        int randomGameId = random.Next(1, 92400);
+    public async Task GetRandomGame()
+    {
+        int randomGameId = random.Next(1, 131);
+        var data = new Data();
+        randomGameId = data.gameIds[randomGameId];
+
         await JS.InvokeVoidAsync("logToConsole", randomGameId);
 
-        try {
-            var request = new HttpRequestMessage(HttpMethod.Get, $"https://www.giantbomb.com/api/game/{randomGameId}/?api_key={apiKey}&format=json&field_list=deck,image,name,platforms,site_detail_url,publishers,genres,guid,original_game_rating,original_release_date,reviews");
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get,
+            $"https://www.giantbomb.com/api/game/{randomGameId}/?api_key={apiKey}&format=json&field_list=deck,image,name,platforms,site_detail_url,publishers,genres,guid,original_game_rating,original_release_date,reviews");
             request.Headers.Add("User-Agent", "Gamle");
             var response = await httpClient.SendAsync(request);
-            randomGame = await response.Content.ReadFromJsonAsync<randomGameResults>();
+            response.EnsureSuccessStatusCode();
+            randomGame = await response.Content.ReadFromJsonAsync<GameResult>();
 
-            if (randomGame.error != null) {
-                DisplayError(true, "emoji-frown", randomGame.error);
-                await JS.InvokeVoidAsync("logToConsole", randomGame.error);
+            if (randomGame == null || randomGame.error != "OK")
+            {
+                DisplayError(true, "emoji-frown", "Error retreving game, Please try again later.");
+                StateHasChanged();
                 return;
             }
-            
-            DisplayError(false, "", "");
-        } catch(Exception e) {
-            DisplayError(true, "emoji-frown", "Error retreving game, Please try again later.");
-            await JS.InvokeVoidAsync("logToConsole", e.Message);
-            return;
+
+            await JS.InvokeVoidAsync("logToConsole", randomGame);
         }
-
-
-        if (randomGame.reviews == null) {
-            await JS.InvokeVoidAsync("logToConsole", randomGame.name);
-            await JS.InvokeVoidAsync("logToConsole", " has no reviews, rerolling");
-            await GetRandomGame();
-        } else {
-            await JS.InvokeVoidAsync("logToConsole", randomGame.name);
-            await JS.InvokeVoidAsync("logToConsole", randomGame.id);
+        catch (Exception e)
+        {
+            DisplayError(true, "emoji-frown", "Error retreving game, Please try again later.");
+            StateHasChanged();
+            await JS.InvokeVoidAsync("logToConsole", "Thrown:" + e.Message);
+            return;
         }
     }
 
@@ -215,54 +231,72 @@
 
     public async Task checkIfGameExistsInOptions()
     {
-        if (resultsFromSearch != null) {
+        if (resultsFromSearch != null)
+        {
             var storedResults = resultsFromSearch.results;
             var storedInput = inputText;
             await JS.InvokeVoidAsync("logToConsole", resultsFromSearch.results);
             await JS.InvokeVoidAsync("logToConsole", inputText);
 
-            foreach (var item in storedResults) {
-                if (item.name.ToLower() == storedInput.ToLower()) {
+            foreach (var item in storedResults)
+            {
+                if (item.name.ToLower() == storedInput.ToLower())
+                {
                     await JS.InvokeVoidAsync("logToConsole", "FOUND");
                     DisplayError(false, "", "");
                     CompareGuessToGame(storedInput);
                     break;
-                } else {
+                }
+                else
+                {
                     DisplayError(true, "exclamation-triangle-fill", "Invalid Game, use the search options to select a game");
                     await JS.InvokeVoidAsync("logToConsole", "NOT FOUND");
                 }
             }
-        } else {
+        }
+        else
+        {
             await JS.InvokeVoidAsync("logToConsole", "results: null");
         }
     }
 
-    public async Task GetGames() {
+    public async Task GetGames()
+    {
 
-        try {
+        try
+        {
             await JS.InvokeVoidAsync("logToConsole", "InputText:" + inputText);
-            if (!string.IsNullOrEmpty(inputText)) {
-                var request = new HttpRequestMessage(HttpMethod.Get, $"https://www.giantbomb.com/api/search/?api_key={apiKey}&format=json&limit=5&resources=game&query={inputText}&field_list=name");
+            if (!string.IsNullOrEmpty(inputText))
+            {
+                var request = new HttpRequestMessage(HttpMethod.Get,
+                $"https://www.giantbomb.com/api/search/?api_key={apiKey}&format=json&limit=5&resources=game&query={inputText}&field_list=name");
                 request.Headers.Add("User-Agent", "Gamle");
                 var response = await httpClient.SendAsync(request);
+                response.EnsureSuccessStatusCode();
                 resultsFromSearch = await response.Content.ReadFromJsonAsync<searchResult>();
             }
 
 
             await JS.InvokeVoidAsync("logToConsole", resultsFromSearch);
-            
-        } catch (Exception e) {
+
+        }
+        catch (Exception e)
+        {
             await JS.InvokeVoidAsync("logToConsole", e.Message);
             return;
         }
     }
 
-    public void  DisplayError(Boolean displayError, string icon, string message) {
-        if (displayError) {
+    public void DisplayError(Boolean displayError, string icon, string message)
+    {
+        if (displayError)
+        {
             alertIsVisible = "row";
             iconError = icon;
             messageError = message;
-        } else {
+        }
+        else
+        {
             alertIsVisible = "row d-none";
         }
     }
@@ -270,9 +304,12 @@
     public void CompareGuessToGame(string gameGuess)
     {
         currentCount++;
-        if (currentCount > 10) {
+        if (currentCount > 10)
+        {
             @* TODO: Add code to show user lost the game and display correct game*@
-        } else {
+        }
+        else
+        {
             @* TODO: Add code to compare the games and display results *@
         }
     }
