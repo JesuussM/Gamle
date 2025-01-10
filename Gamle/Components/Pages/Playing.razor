@@ -57,35 +57,58 @@
                 <h6>Guess @currentCount of 10</h6>
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-3">
-                <h6>Image</h6>
-            </div>
-            <div class="col-md-3">
-                <h6>Name</h6>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-4">
-                <h6>Release Year</h6>
-            </div>
-            <div class="col-md-2">
-                <h6>Rating</h6>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-2">
-                <h6>Publisher</h6>
-            </div>
-            <div class="col-md-4">
-                <h6>Genre</h6>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-6">
-                <h6>Platforms</h6>
-            </div>
-        </div>
+
+        @if (gameGuesses == null) 
+        {
+            <div class="row"></div>
+        } else 
+        {
+            @foreach (var item in gameGuesses)
+            {
+                @* TODO: Add better styling *@
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <img src="@item.results.image.thumb_url" class="img-thumbnail" alt="@item.results.name" />
+                    </div>
+                    <div class="col-md-3">
+                        <h6>@item.results.name</h6>
+                    </div>
+                </div>
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <h6>@item.results.original_release_date</h6>
+                    </div>
+                    <div class="col-md-2">
+                        @foreach (var rating in item.results.original_game_rating)
+                        {
+                            <h6>@rating.name</h6>
+                        }
+                    </div>
+                </div>
+                <div class="row align-items-center">
+                    <div class="col-md-2">
+                        @foreach (var publisher in item.results.publishers)
+                        {
+                            <h6>@publisher.name</h6>
+                        }
+                    </div>
+                    <div class="col-md-4">
+                        @foreach (var genre in item.results.genres)
+                        {
+                            <h6>@genre.name</h6>
+                        }
+                    </div>
+                </div>
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        @foreach (var platform in item.results.platforms)
+                        {
+                            <span class="badge bg-secondary">@platform.abbreviation</span>
+                        }
+                    </div>
+                </div>
+            }
+        }
     </div>
 </div>
 
@@ -97,6 +120,7 @@
     private bool _isInitialized;
     Random random = new();
     public GameResult? randomGame;
+    public List<GameResult>? gameGuesses;
     public int currentCount = 0;
     public string? inputText;
     public string iconError = "emoji-frown";
@@ -104,52 +128,53 @@
     public string alertIsVisible = "row d-none";
     public searchResult? resultsFromSearch;
     public Timer? _debounceTimer;
+    public string guessId;
 
     // Classes used to store results from API calls
     public class GameResult
     {
-        public string error { get; set; }
-        public Results results { get; set; }
+        public string? error { get; set; }
+        public Results? results { get; set; }
     }
 
     public class Results
     {
-        public string deck { get; set; }
-        public string guid { get; set; }
-        public Image image { get; set; }
-        public string name { get; set; }
-        public List<OriginalGameRating> original_game_rating { get; set; }
-        public string original_release_date { get; set; }
-        public List<Platform> platforms { get; set; }
-        public string site_detail_url { get; set; }
-        public List<Genre> genres { get; set; }
-        public List<Publisher> publishers { get; set; }
+        public string? deck { get; set; }
+        public string? guid { get; set; }
+        public Image? image { get; set; }
+        public string? name { get; set; }
+        public List<OriginalGameRating>? original_game_rating { get; set; }
+        public string? original_release_date { get; set; }
+        public List<Platform>? platforms { get; set; }
+        public string? site_detail_url { get; set; }
+        public List<Genre>? genres { get; set; }
+        public List<Publisher>? publishers { get; set; }
     }
 
     public class Image
     {
-        public string original_url { get; set; }
+        public string? thumb_url { get; set; }
     }
 
     public class OriginalGameRating
     {
         public int id { get; set; }
-        public string name { get; set; }
+        public string? name { get; set; }
     }
 
     public class Platform
     {
-        public string abbreviation { get; set; }
+        public string? abbreviation { get; set; }
     }
 
     public class Genre
     {
-        public string name { get; set; }
+        public string? name { get; set; }
     }
 
     public class Publisher
     {
-        public string name { get; set; }
+        public string? name { get; set; }
     }
 
     public class searchResult
@@ -161,6 +186,7 @@
 
     public class SearchGameResult
     {
+        public string? guid { get; set; }
         public string? name { get; set; }
         public string? resourceType { get; set; }
     }
@@ -199,7 +225,7 @@
 
             if (randomGame == null || randomGame.error != "OK")
             {
-                DisplayError(true, "emoji-frown", "Error retreving game, Please try again later.");
+                DisplayError(true, "emoji-frown", "Error retrieving game, Please try again later.");
                 StateHasChanged();
                 return;
             }
@@ -208,7 +234,7 @@
         }
         catch (Exception e)
         {
-            DisplayError(true, "emoji-frown", "Error retreving game, Please try again later.");
+            DisplayError(true, "emoji-frown", "Error retrieving game, Please try again later.");
             StateHasChanged();
             await JS.InvokeVoidAsync("logToConsole", "Thrown:" + e.Message);
             return;
@@ -223,7 +249,7 @@
         {
             await InvokeAsync(async () =>
             {
-                await GetGames();
+                await SearchGetGames();
                 StateHasChanged();
             });
         }, null, 500, Timeout.Infinite);
@@ -240,17 +266,21 @@
 
             foreach (var item in storedResults)
             {
-                if (item.name.ToLower() == storedInput.ToLower())
+                if (item.name != null && item.guid != null && storedInput != null)
                 {
-                    await JS.InvokeVoidAsync("logToConsole", "FOUND");
-                    DisplayError(false, "", "");
-                    CompareGuessToGame(storedInput);
-                    break;
-                }
-                else
-                {
-                    DisplayError(true, "exclamation-triangle-fill", "Invalid Game, use the search options to select a game");
-                    await JS.InvokeVoidAsync("logToConsole", "NOT FOUND");
+                    if (item.name.ToLower() == storedInput.ToLower())
+                    {
+                        await JS.InvokeVoidAsync("logToConsole", "FOUND");
+                        guessId = item.guid.Substring(5);
+                        DisplayError(false, "", "");
+                        await GetGameInfo(guessId);
+                        break;
+                    }
+                    else
+                    {
+                        DisplayError(true, "exclamation-triangle-fill", "Invalid Game, use the search options to select a game");
+                        await JS.InvokeVoidAsync("logToConsole", "NOT FOUND");
+                    }
                 }
             }
         }
@@ -260,7 +290,7 @@
         }
     }
 
-    public async Task GetGames()
+    public async Task SearchGetGames()
     {
 
         try
@@ -269,16 +299,13 @@
             if (!string.IsNullOrEmpty(inputText))
             {
                 var request = new HttpRequestMessage(HttpMethod.Get,
-                $"https://www.giantbomb.com/api/search/?api_key={apiKey}&format=json&limit=5&resources=game&query={inputText}&field_list=name");
+                $"https://www.giantbomb.com/api/search/?api_key={apiKey}&format=json&limit=5&resources=game&query={inputText}&field_list=name,guid");
                 request.Headers.Add("User-Agent", "Gamle");
                 var response = await httpClient.SendAsync(request);
                 response.EnsureSuccessStatusCode();
                 resultsFromSearch = await response.Content.ReadFromJsonAsync<searchResult>();
             }
-
-
             await JS.InvokeVoidAsync("logToConsole", resultsFromSearch);
-
         }
         catch (Exception e)
         {
@@ -301,16 +328,54 @@
         }
     }
 
+    public async Task GetGameInfo(string gameId)
+    {
+        try 
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get,
+            $"https://www.giantbomb.com/api/game/{gameId}/?api_key={apiKey}&format=json&field_list=deck,image,name,platforms,site_detail_url,publishers,genres,guid,original_game_rating,original_release_date,reviews");
+            request.Headers.Add("User-Agent", "Gamle");
+            var response = await httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var gameResult = await response.Content.ReadFromJsonAsync<GameResult>();
+
+            if (gameResult == null || gameResult.error != "OK")
+            {
+                DisplayError(true, "emoji-frown", "Error retrieving game, Please try again later.");
+                StateHasChanged();
+                return;
+            }
+
+            if (gameGuesses == null)
+            {
+                gameGuesses = new List<GameResult>();
+            }
+            
+            gameGuesses.Add(gameResult);
+            StateHasChanged();
+        } catch(Exception e)
+        {
+            DisplayError(true, "emoji-frown", "Error retrieving game, Please try again later.");
+            StateHasChanged();
+            await JS.InvokeVoidAsync("logToConsole", "Thrown:" + e.Message);
+            return;
+        }
+
+        
+        await JS.InvokeVoidAsync("logToConsole", gameGuesses);
+    }
+
     public void CompareGuessToGame(string gameGuess)
     {
         currentCount++;
-        if (currentCount > 10)
+        if (currentCount <= 10)
         {
-            @* TODO: Add code to show user lost the game and display correct game*@
+            @* TODO: Add code to compare the games and display results *@
+
         }
         else
         {
-            @* TODO: Add code to compare the games and display results *@
+            @* TODO: Add code to show user lost the game and display correct game*@
         }
     }
 }
