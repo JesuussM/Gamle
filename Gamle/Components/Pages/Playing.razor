@@ -65,7 +65,6 @@
         {
             @foreach (var item in gameGuesses.AsEnumerable().Reverse())
             {
-                @* TODO: New entries should be at the top, currently is added to button *@
                 <div class="row align-items-center">
                     <div class="col-md-2">
                         <img src="@item.results.image.thumb_url" class="img-thumbnail" alt="@item.results.name" />
@@ -75,19 +74,19 @@
                     </div>
                 </div>
                 <div class="row align-items-center">
-                    <div class="card col-md-2 square-card">
+                    <div class="card @item.yearMatch col-md-2 square-card">
                         <div class="card-body">
                             <h6 class="card-title">Release Year</h6>
                             <h6 class="card-text"><strong>@item.results.original_release_date.Substring(0, 4)</strong></h6>
                         </div>
                     </div>
-                    <div class="card col-md-2 square-card">
+                    <div class="card @item.ratingMatch col-md-2 square-card">
                         <div class="card-body">
                             <h6 class="card-title">Rating</h6>
                             <h6 class="card-text"><strong>@item.results.original_game_rating[0].name</strong></h6>
                         </div>
                     </div>
-                    <div class="card col-md-2 square-card">
+                    <div class="card @item.publisherMatch col-md-2 square-card">
                         <div class="card-body">
                             <h6 class="card-title">Publisher</h6>
                             @if (item.results.publishers != null && item.results.publishers.Count > 0)
@@ -107,7 +106,7 @@
                     </div>
                 </div>
                 <div class="row align-items-center">
-                    <div class="card col-md-3 square-card">
+                    <div class="card @item.themeMatch col-md-3 square-card">
                         <div class="card-body">
                             <h6 class="card-title">Themes</h6>
                             <div class="card-list">
@@ -118,7 +117,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="card col-md-3 square-card">
+                    <div class="card @item.genreMatch col-md-3 square-card">
                         <div class="card-body">
                             <h6 class="card-title">Genres</h6>
                             <div class="card-list">
@@ -131,7 +130,7 @@
                     </div>
                 </div>
                 <div class="row align-items-center mb-5">
-                    <div class="card col-md-6 square-card">
+                    <div class="card @item.platformMatch col-md-6 square-card">
                         <div class="card-body">
                             <h6 class="card-title">Platforms</h6>
                             <div class="card-list">
@@ -189,6 +188,12 @@
     {
         public string? error { get; set; }
         public Results? results { get; set; }
+        public string yearMatch = "";
+        public string ratingMatch = "";
+        public string publisherMatch = "";
+        public string themeMatch = "";
+        public string genreMatch = "";
+        public string platformMatch = "";
     }
 
     public class Results
@@ -220,21 +225,76 @@
     public class Platform
     {
         public string? abbreviation { get; set; }
+        public override bool Equals(object? obj)
+        {
+            if (obj is Platform other)
+            {
+                return this.abbreviation == other.abbreviation;
+            }
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return abbreviation?.GetHashCode() ?? 0;
+        }
     }
 
     public class Genre
     {
         public string? name { get; set; }
+
+        public override bool Equals(object? obj)
+        {
+            if (obj is Genre other)
+            {
+                return this.name == other.name;
+            }
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return name?.GetHashCode() ?? 0;
+        }
     }
 
     public class Publisher
     {
         public string? name { get; set; }
+
+        public override bool Equals(object? obj)
+        {
+            if (obj is Publisher other)
+            {
+                return this.name == other.name;
+            }
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return name?.GetHashCode() ?? 0;
+        }
     }
 
     public class Theme
     {
         public string? name { get; set; }
+
+        public override bool Equals(object? obj)
+        {
+            if (obj is Theme other)
+            {
+                return this.name == other.name;
+            }
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return name?.GetHashCode() ?? 0;
+        }
     }
 
     public class searchResult
@@ -277,7 +337,7 @@
         try
         {
             var request = new HttpRequestMessage(HttpMethod.Get,
-            $"https://www.giantbomb.com/api/game/{randomGameId}/?api_key={apiKey}&format=json&field_list=deck,image,name,platforms,site_detail_url,publishers,genres,guid,original_game_rating,original_release_date,reviews");
+            $"https://www.giantbomb.com/api/game/{randomGameId}/?api_key={apiKey}&format=json&field_list=deck,image,name,platforms,site_detail_url,publishers,genres,guid,original_game_rating,original_release_date,reviews,themes");
             request.Headers.Add("User-Agent", "Gamle");
             var response = await httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
@@ -330,7 +390,6 @@
                 {
                     if (item.name.ToLower() == storedInput.ToLower())
                     {
-                        await JS.InvokeVoidAsync("logToConsole", "FOUND");
                         guessId = item.guid.Substring(5);
                         DisplayError(false, "", "");
                         await GetGameInfo(guessId);
@@ -339,7 +398,6 @@
                     else
                     {
                         DisplayError(true, "exclamation-triangle-fill", "Invalid Game, use the search options to select a game");
-                        await JS.InvokeVoidAsync("logToConsole", "NOT FOUND");
                     }
                 }
             }
@@ -355,7 +413,6 @@
 
         try
         {
-            await JS.InvokeVoidAsync("logToConsole", "InputText:" + inputText);
             if (!string.IsNullOrEmpty(inputText))
             {
                 var request = new HttpRequestMessage(HttpMethod.Get,
@@ -365,7 +422,6 @@
                 response.EnsureSuccessStatusCode();
                 resultsFromSearch = await response.Content.ReadFromJsonAsync<searchResult>();
             }
-            await JS.InvokeVoidAsync("logToConsole", resultsFromSearch);
         }
         catch (Exception e)
         {
@@ -413,6 +469,8 @@
             
             gameGuesses.Add(gameResult);
             StateHasChanged();
+            await JS.InvokeVoidAsync("logToConsole", gameResult);
+            CompareGuessToGame(gameResult);
         } catch(Exception e)
         {
             DisplayError(true, "emoji-frown", "Error retrieving game, Please try again later.");
@@ -420,22 +478,112 @@
             await JS.InvokeVoidAsync("logToConsole", "Thrown:" + e.Message);
             return;
         }
-
-        
-        await JS.InvokeVoidAsync("logToConsole", gameGuesses);
     }
 
-    public void CompareGuessToGame(string gameGuess)
+    public void CompareGuessToGame(GameResult gameGuess)
     {
         currentCount++;
         if (currentCount <= 10)
         {
-            @* TODO: Add code to compare the games and display results *@
-
-        }
-        else
+            if (randomGame?.results?.original_release_date?.Substring(0, 4) == gameGuess?.results?.original_release_date?.Substring(0, 4))
+            {
+                gameGuess.yearMatch = "text-bg-success";
+            } else if (Int32.Parse(randomGame?.results?.original_release_date?.Substring(0, 4) ?? "0") - Int32.Parse(gameGuess?.results?.original_release_date?.Substring(0, 4) ?? "0") >= -3 &&
+                     Int32.Parse(randomGame?.results?.original_release_date?.Substring(0, 4) ?? "0") - Int32.Parse(gameGuess?.results?.original_release_date?.Substring(0, 4) ?? "0") <= 3)
+            {
+                gameGuess.yearMatch = "text-bg-warning";
+            } else
+            {
+                gameGuess.yearMatch = "";
+            }
+    
+            if (randomGame?.results?.original_game_rating?.FirstOrDefault()?.name == gameGuess?.results?.original_game_rating?.FirstOrDefault()?.name)
+            {
+                gameGuess.ratingMatch = "text-bg-success";
+            } else
+            {
+                gameGuess.ratingMatch = "";
+            }
+    
+            if (randomGame?.results?.publishers?.FirstOrDefault()?.name == gameGuess?.results?.publishers?.FirstOrDefault()?.name)
+            {
+                gameGuess.publisherMatch = "text-bg-success";
+            } else
+            {
+                gameGuess.publisherMatch = "";
+            }
+    
+            if (randomGame?.results?.themes?.SequenceEqual(gameGuess?.results?.themes ?? Enumerable.Empty<Theme>()) == true)
+            {
+                gameGuess.themeMatch = "text-bg-success";
+            } else
+            {
+                foreach (var theme in gameGuess?.results?.themes ?? Enumerable.Empty<Theme>())
+                {
+                    if (randomGame?.results?.themes?.Contains(theme) == true)
+                    {
+                        gameGuess.themeMatch = "text-bg-warning";
+                        break;
+                    } else
+                    {
+                        gameGuess.themeMatch = "";
+                    }
+                }
+            }
+    
+            if (randomGame?.results?.genres?.SequenceEqual(gameGuess?.results?.genres ?? Enumerable.Empty<Genre>()) == true)
+            {
+                gameGuess.genreMatch = "text-bg-success";
+            } else
+            {
+                foreach (var genre in gameGuess?.results?.genres ?? Enumerable.Empty<Genre>())
+                {
+                    if (randomGame?.results?.genres?.Contains(genre) == true)
+                    {
+                        gameGuess.genreMatch = "text-bg-warning";
+                        break;
+                    } else
+                    {
+                        gameGuess.genreMatch = "";
+                    }
+                }
+            }
+    
+            if (randomGame?.results?.platforms?.SequenceEqual(gameGuess?.results?.platforms ?? Enumerable.Empty<Platform>()) == true)
+            {
+                gameGuess.platformMatch = "text-bg-success";
+            } else
+            {
+                foreach (var platform in gameGuess?.results?.platforms ?? Enumerable.Empty<Platform>())
+                {
+                    if (randomGame?.results?.platforms?.Contains(platform) == true)
+                    {
+                        gameGuess.platformMatch = "text-bg-warning";
+                        break;
+                    } else
+                    {
+                        gameGuess.platformMatch = "";
+                    }
+                }
+            }
+            @* CheckWin(gameGuess); *@
+        } else
         {
             @* TODO: Add code to show user lost the game and display correct game*@
+        }
+    }
+
+    public void CheckWin(GameResult gameGuess)
+    {
+        if (gameGuess.yearMatch == "text-bg-success" && 
+            gameGuess.ratingMatch == "text-bg-success" && 
+            gameGuess.publisherMatch == "text-bg-success" && 
+            gameGuess.themeMatch == "text-bg-success" && 
+            gameGuess.genreMatch == "text-bg-success" && 
+            gameGuess.platformMatch == "text-bg-success")
+        {
+            @* TODO: Add code to show user won the game *@
+            
         }
     }
 }
