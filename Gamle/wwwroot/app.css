@@ -22,9 +22,9 @@ a, .btn-link {
     padding-top: 1.1rem;
 }
 
-div {
+/* div {
     border: 1px solid red;
-}
+} */
 
 .container-fluid {
     display: flex;
@@ -53,6 +53,29 @@ div {
 .form-control {
     background-color: #212121;
     color: #e8e8e8;
+}
+
+.square-card {
+    text-align: center;
+    border-radius: 10px;
+    height: 68px;
+    padding: 2.5px;
+    margin: 5px;
+    justify-content: center;
+    align-items: center;
+    display: flex;
+    flex-direction: row;
+}
+
+.card-text {
+    font-size: 1.3rem;
+}
+
+.card-list {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    justify-content: center;
 }
 
 .guess-counter {

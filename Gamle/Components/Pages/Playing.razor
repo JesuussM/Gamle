@@ -63,48 +63,102 @@
             <div class="row"></div>
         } else 
         {
-            @foreach (var item in gameGuesses)
+            @foreach (var item in gameGuesses.AsEnumerable().Reverse())
             {
-                @* TODO: Add better styling *@
+                @* TODO: New entries should be at the top, currently is added to button *@
                 <div class="row align-items-center">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <img src="@item.results.image.thumb_url" class="img-thumbnail" alt="@item.results.name" />
                     </div>
-                    <div class="col-md-3">
-                        <h6>@item.results.name</h6>
-                    </div>
-                </div>
-                <div class="row align-items-center">
                     <div class="col-md-4">
-                        <h6>@item.results.original_release_date</h6>
-                    </div>
-                    <div class="col-md-2">
-                        @foreach (var rating in item.results.original_game_rating)
-                        {
-                            <h6>@rating.name</h6>
-                        }
+                        <h3><strong>@item.results.name</strong></h3>
                     </div>
                 </div>
                 <div class="row align-items-center">
-                    <div class="col-md-2">
-                        @foreach (var publisher in item.results.publishers)
-                        {
-                            <h6>@publisher.name</h6>
-                        }
+                    <div class="card col-md-2 square-card">
+                        <div class="card-body">
+                            <h6 class="card-title">Release Year</h6>
+                            <h6 class="card-text"><strong>@item.results.original_release_date.Substring(0, 4)</strong></h6>
+                        </div>
                     </div>
-                    <div class="col-md-4">
-                        @foreach (var genre in item.results.genres)
-                        {
-                            <h6>@genre.name</h6>
-                        }
+                    <div class="card col-md-2 square-card">
+                        <div class="card-body">
+                            <h6 class="card-title">Rating</h6>
+                            <h6 class="card-text"><strong>@item.results.original_game_rating[0].name</strong></h6>
+                        </div>
+                    </div>
+                    <div class="card col-md-2 square-card">
+                        <div class="card-body">
+                            <h6 class="card-title">Publisher</h6>
+                            @if (item.results.publishers != null && item.results.publishers.Count > 0)
+                            {
+                                @if(item.results.publishers[0].name.Length > 17)
+                                {
+                                    <h6 class="card-text fs-6"><strong>@item.results.publishers[0].name.Substring(0, 17)...</strong></h6>
+                                } else
+                                {
+                                    <h6 class="card-text fs-6"><strong>@item.results.publishers[0].name</strong></h6>
+                                }
+                            } else
+                            {
+                                <h6 class="card-text fs-6"><strong>N/A</strong></h6>
+                            }
+                        </div>
                     </div>
                 </div>
                 <div class="row align-items-center">
-                    <div class="col-md-6">
-                        @foreach (var platform in item.results.platforms)
-                        {
-                            <span class="badge bg-secondary">@platform.abbreviation</span>
-                        }
+                    <div class="card col-md-3 square-card">
+                        <div class="card-body">
+                            <h6 class="card-title">Themes</h6>
+                            <div class="card-list">
+                                @foreach (var themes in item.results.themes)
+                                {
+                                    <h6 class="card-text fs-6"><strong>@themes.name</strong></h6>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card col-md-3 square-card">
+                        <div class="card-body">
+                            <h6 class="card-title">Genres</h6>
+                            <div class="card-list">
+                                @foreach (var genre in item.results.genres)
+                                {
+                                    <h6 class="card-text fs-6"><strong>@genre.name</strong></h6>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row align-items-center mb-5">
+                    <div class="card col-md-6 square-card">
+                        <div class="card-body">
+                            <h6 class="card-title">Platforms</h6>
+                            <div class="card-list">
+                                @foreach (var platform in item.results.platforms)
+                                {
+                                    <div>
+                                        @if (platform.abbreviation.StartsWith("PC"))
+                                        {
+                                            <i class="bi bi-pc"></i>
+                                        } else if (platform.abbreviation.StartsWith("PS"))
+                                        {
+                                            <i class="bi bi-playstation"></i>
+                                        } else if (platform.abbreviation.StartsWith("X"))
+                                        {
+                                            <i class="bi bi-xbox"></i>
+                                        } else if (platform.abbreviation.StartsWith("N"))
+                                        {
+                                            <i class="bi bi-nintendo-switch"></i>
+                                        } else
+                                        {
+                                            <i class="bi bi-controller"></i>
+                                        }
+                                        <span class="card-text fs-6 ms-1">@platform.abbreviation</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
                     </div>
                 </div>
             }
@@ -149,6 +203,7 @@
         public string? site_detail_url { get; set; }
         public List<Genre>? genres { get; set; }
         public List<Publisher>? publishers { get; set; }
+        public List<Theme>? themes { get; set; }
     }
 
     public class Image
@@ -173,6 +228,11 @@
     }
 
     public class Publisher
+    {
+        public string? name { get; set; }
+    }
+
+    public class Theme
     {
         public string? name { get; set; }
     }
@@ -333,7 +393,7 @@
         try 
         {
             var request = new HttpRequestMessage(HttpMethod.Get,
-            $"https://www.giantbomb.com/api/game/{gameId}/?api_key={apiKey}&format=json&field_list=deck,image,name,platforms,site_detail_url,publishers,genres,guid,original_game_rating,original_release_date,reviews");
+            $"https://www.giantbomb.com/api/game/{gameId}/?api_key={apiKey}&format=json&field_list=deck,image,name,platforms,site_detail_url,publishers,genres,guid,original_game_rating,original_release_date,reviews,themes");
             request.Headers.Add("User-Agent", "Gamle");
             var response = await httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
