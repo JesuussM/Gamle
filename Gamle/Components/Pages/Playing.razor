@@ -15,14 +15,35 @@
     </script>
 </head>
 
+
+
 <div class="container-fluid d-block" data-bs-theme="dark">
+    <div class="modal fade @showModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5">@modalTitle</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body d-flex justify-content-center align-items-center flex-column">
+                    <p>The game was ...</p>
+                    <img src="@randomGame?.results?.image?.thumb_url" class="img-thumbnail" alt="@randomGame?.results?.name" />
+                    <h3><strong>@randomGame?.results?.name</strong></h3>
+                </div>
+                <div class="modal-footer">
+                    <a class="text-primary-emphasis" href="@randomGame?.results?.site_detail_url" target="_blank">Learn more at GiantBomb!</a>
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="container">
         <h1 class="display-1"><strong>Gamle</strong></h1>
         <div class="row">
             <div class="col-md-6 d-flex align-items-center">
                 <div class="form-floating flex-grow-1">
                     <input class="form-control" list="datalistOptions" placeholder="" @bind="inputText"
-                        @oninput="UpdateInput" />
+                        @oninput="UpdateInput" disabled="@isDisabled"/>
                     <label class="form-label">Search</label>
                     <datalist id="datalistOptions">
                         @if (resultsFromSearch != null && resultsFromSearch.results != null)
@@ -39,7 +60,7 @@
                     </datalist>
                 </div>
                 <button class="btn btn-outline-primary btn-lg ms-2"
-                    @onclick="checkIfGameExistsInOptions">Submit</button>
+                    @onclick="checkIfGameExistsInOptions" disabled="@isDisabled">Submit</button>
             </div>
         </div>
         <div class="@alertIsVisible">
@@ -182,6 +203,9 @@
     public searchResult? resultsFromSearch;
     public Timer? _debounceTimer;
     public string guessId;
+    public string showModal = "d-none";
+    public string modalTitle = "";
+    public bool isDisabled = false;
 
     // Classes used to store results from API calls
     public class GameResult
@@ -566,12 +590,16 @@
                     }
                 }
             }
-            @* CheckWin(gameGuess); *@
+            CheckWin(gameGuess);
         } else
         {
-            @* TODO: Add code to show user lost the game and display correct game*@
+            modalTitle = "You lost!";
+            OpenModal();
         }
     }
+
+    @* TODO: Add null checks for all the warnings *@
+    @* TODO: Add refresh functionality so another game can be played *@
 
     public void CheckWin(GameResult gameGuess)
     {
@@ -580,10 +608,23 @@
             gameGuess.publisherMatch == "text-bg-success" && 
             gameGuess.themeMatch == "text-bg-success" && 
             gameGuess.genreMatch == "text-bg-success" && 
-            gameGuess.platformMatch == "text-bg-success")
+            gameGuess.platformMatch == "text-bg-success" &&
+            gameGuess.results.guid == randomGame.results.guid)
         {
-            @* TODO: Add code to show user won the game *@
-            
+            modalTitle = $"You won in {currentCount} guesses!";
+            OpenModal();
         }
+    }
+
+
+    public void OpenModal()
+    {
+        isDisabled = true;
+        showModal = " show d-block";
+    }
+
+    public void CloseModal()
+    {
+        showModal = "d-none";
     }
 }
