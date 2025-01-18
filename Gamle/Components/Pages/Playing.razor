@@ -15,8 +15,6 @@
     </script>
 </head>
 
-
-
 <div class="container-fluid d-block" data-bs-theme="dark">
     <div class="modal fade @showModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
@@ -78,6 +76,14 @@
                 <h6>Guess @currentCount of 10</h6>
             </div>
         </div>
+        @if (gameWin) 
+        {
+            <div class="row">
+                <div class="col-md-6">
+                    <button class="btn btn-outline-warning btn-lg" @onclick=Refresh>Play Again?</button>
+                </div>
+            </div>
+        }
 
         @if (gameGuesses == null) 
         {
@@ -206,6 +212,7 @@
     public string showModal = "d-none";
     public string modalTitle = "";
     public bool isDisabled = false;
+    public bool gameWin = false;
 
     // Classes used to store results from API calls
     public class GameResult
@@ -348,6 +355,17 @@
             _isInitialized = true;
             await GetRandomGame();
         }
+    }
+
+    protected async Task Refresh() 
+    {
+        _isInitialized = false;
+        gameGuesses = null;
+        inputText = "";
+        currentCount = 0;
+        isDisabled = false;
+        gameWin = false;
+        await OnAfterRenderAsync(true);
     }
 
     public async Task GetRandomGame()
@@ -599,7 +617,6 @@
     }
 
     @* TODO: Add null checks for all the warnings *@
-    @* TODO: Add refresh functionality so another game can be played *@
 
     public void CheckWin(GameResult gameGuess)
     {
@@ -620,6 +637,7 @@
     public void OpenModal()
     {
         isDisabled = true;
+        gameWin = true;
         showModal = " show d-block";
     }
 
