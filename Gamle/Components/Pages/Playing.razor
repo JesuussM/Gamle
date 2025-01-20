@@ -29,9 +29,10 @@
         </div>
     </div>
     <div class="container">
-        <h1 class="display-1"><strong>Gamle</strong></h1>
-        <div class="row">
-            <div class="col-md-6 d-flex align-items-center">
+        <h1 class="display-1 m-0 p-0"><strong>Gamle</strong></h1>
+        <p class="caption m-0 p-0">Guess the game!</p>
+        <div class="row align-items-center mb-2">
+            <div class="col-md-4 col-12 d-flex align-items-center">
                 <div class="form-floating flex-grow-1">
                     <input class="form-control" list="datalistOptions" placeholder="" @bind="inputText"
                         @oninput="UpdateInput" disabled="@isDisabled"/>
@@ -50,9 +51,11 @@
                         }
                     </datalist>
                 </div>
-                <button class="btn btn-outline-primary btn-lg ms-2"
-                    @onclick="checkIfGameExistsInOptions" disabled="@isDisabled">Submit</button>
             </div>
+                <div class="col-md-2 col-12 align-items-center">
+                    <button class="btn btn-outline-primary btn-lg w-100"
+                        @onclick="checkIfGameExistsInOptions" disabled="@isDisabled">Submit</button>
+                </div>
         </div>
         <div class="@alertIsVisible">
             <div class="col-md-6">
@@ -88,7 +91,7 @@
                 @if (item.results != null)
                 {
                     <div class="row align-items-center">
-                        <div class="col-md-2">
+                        <div class="col-md-2 col-6">
                             @if (item.results.image != null)
                             {
                                 <img src="@item.results.image.thumb_url" class="img-thumbnail" alt="@item.results.name" />
@@ -97,56 +100,45 @@
                                 <p>N/A</p>
                             }
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-4 col-6">
                             <h3><strong>@item.results.name</strong></h3>
                         </div>
                     </div>
                     <div class="row align-items-center">
-                        <div class="card @item.yearMatch col-md-2 square-card">
+                        <div class="card @item.yearMatch col-md-2 col-4 square-card">
                             <div class="card-body">
-                                <h6 class="card-title">Release Year</h6>
+                                <h6 class="card-title">Year</h6>
                                 @if (item.results.original_release_date != null)
                                 {
-                                    <h6 class="card-text"><strong>@item.results.original_release_date.Substring(0, 4)</strong>  <i class="@item.yearIcon"></i></h6>
+                                    <h6 class="card-text fs-6"><strong>@item.results.original_release_date.Substring(0, 4)</strong><i class="@item.yearIcon"></i></h6>
                                 } else
                                 {
                                     <h6 class="card-text"><strong>N/A</strong></h6>
                                 }
                             </div>
                         </div>
-                        <div class="card @item.ratingMatch col-md-2 square-card">
+                        <div class="card @item.ratingMatch col-md-2 col-3 square-card">
                             <div class="card-body">
                                 <h6 class="card-title">Rating</h6>
                                 @if (item.results.original_game_rating != null && item.results.original_game_rating.Count > 0)
                                 {
-                                    <h6 class="card-text"><strong>@item.results.original_game_rating[0].name</strong></h6>
+                                    int colonIndex = (item.results.original_game_rating[0]?.name?.IndexOf(":") ?? -1) + 1;
+                                    <h6 class="card-text fs-6"><strong>@(colonIndex >= 0 ? item.results.original_game_rating[0]?.name?.Substring(colonIndex) : item.results.original_game_rating[0].name)</strong></h6>
                                 } else
                                 {
                                     <h6 class="card-text"><strong>N/A</strong></h6>
                                 }
                             </div>
                         </div>
-                        <div class="card @item.publisherMatch col-md-2 square-card">
+                        <div class="card @item.rankMatch col-md-2 col-3 square-card">
                             <div class="card-body">
-                                <h6 class="card-title">Publisher</h6>
-                                @if (item.results.publishers != null && item.results.publishers.Count > 0)
-                                {
-                                    @if(item.results.publishers[0]?.name?.Length > 17)
-                                    {
-                                        <h6 class="card-text fs-6"><strong>@item.results.publishers[0]?.name?.Substring(0, 17)...</strong></h6>
-                                    } else
-                                    {
-                                        <h6 class="card-text fs-6"><strong>@item.results.publishers[0].name</strong></h6>
-                                    }
-                                } else
-                                {
-                                    <h6 class="card-text fs-6"><strong>N/A</strong></h6>
-                                }
+                                <h6 class="card-title">Rank</h6>
+                                <h6 class="card-text fs-6"><strong>@item.rank</strong><i class="@item.rankIcon"></i></h6>
                             </div>
                         </div>
                     </div>
                     <div class="row align-items-center">
-                        <div class="card @item.themeMatch col-md-3 square-card">
+                        <div class="card @item.themeMatch col-md-3 col-12 square-card">
                             <div class="card-body">
                                 <h6 class="card-title">Themes</h6>
                                 <div class="card-list">
@@ -163,7 +155,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="card @item.genreMatch col-md-3 square-card">
+                        <div class="card @item.genreMatch col-md-3 col-12 square-card">
                             <div class="card-body">
                                 <h6 class="card-title">Genres</h6>
                                 <div class="card-list">
@@ -182,7 +174,7 @@
                         </div>
                     </div>
                     <div class="row align-items-center mb-5">
-                        <div class="card @item.platformMatch col-md-5 square-card">
+                        <div class="card @item.platformMatch col-md-4 col-12 square-card">
                             <div class="card-body">
                                 <h6 class="card-title">Platforms</h6>
                                 <div class="card-list">
@@ -220,10 +212,22 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="card @item.rankMatch col-md-1 square-card">
+                        <div class="card @item.publisherMatch col-md-2 col-12 square-card">
                             <div class="card-body">
-                                <h6 class="card-title">Rank</h6>
-                                <h6 class="card-text fs-6"><strong>@item.rank</strong>  <i class="@item.rankIcon"></i></h6>
+                                <h6 class="card-title">Publisher</h6>
+                                @if (item.results.publishers != null && item.results.publishers.Count > 0)
+                                {
+                                    @if(item.results.publishers[0]?.name?.Length > 17)
+                                    {
+                                        <h6 class="card-text fs-6"><strong>@item.results.publishers[0]?.name?.Substring(0, 17)...</strong></h6>
+                                    } else
+                                    {
+                                        <h6 class="card-text fs-6"><strong>@item.results.publishers[0].name</strong></h6>
+                                    }
+                                } else
+                                {
+                                    <h6 class="card-text fs-6"><strong>N/A</strong></h6>
+                                }
                             </div>
                         </div>
                     </div>
@@ -739,7 +743,6 @@
                     }
                 } else
                 {
-                    gameGuess.rankIcon = "bi bi-caret-up";
                     gameGuess.rank = "250+";
                 }
             }
