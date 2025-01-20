@@ -107,7 +107,7 @@
                                 <h6 class="card-title">Release Year</h6>
                                 @if (item.results.original_release_date != null)
                                 {
-                                    <h6 class="card-text"><strong>@item.results.original_release_date.Substring(0, 4)</strong></h6>
+                                    <h6 class="card-text"><strong>@item.results.original_release_date.Substring(0, 4)</strong>  <i class="@item.yearIcon"></i></h6>
                                 } else
                                 {
                                     <h6 class="card-text"><strong>N/A</strong></h6>
@@ -182,7 +182,7 @@
                         </div>
                     </div>
                     <div class="row align-items-center mb-5">
-                        <div class="card @item.platformMatch col-md-6 square-card">
+                        <div class="card @item.platformMatch col-md-5 square-card">
                             <div class="card-body">
                                 <h6 class="card-title">Platforms</h6>
                                 <div class="card-list">
@@ -220,6 +220,12 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="card @item.rankMatch col-md-1 square-card">
+                            <div class="card-body">
+                                <h6 class="card-title">Rank</h6>
+                                <h6 class="card-text fs-6"><strong>@item.rank</strong>  <i class="@item.rankIcon"></i></h6>
+                            </div>
+                        </div>
                     </div>
                 } else 
                 {
@@ -237,6 +243,7 @@
     private string? apiKey;
     private bool _isInitialized;
     Random random = new();
+    public int rankRandomGame = 0;
     public GameResult? randomGame;
     public List<GameResult>? gameGuesses;
     public int currentCount = 0;
@@ -257,12 +264,16 @@
     {
         public string? error { get; set; }
         public Results? results { get; set; }
+        public string rank = "0";
+        public string rankIcon = "";
         public string yearMatch = "";
+        public string yearIcon = "";
         public string ratingMatch = "";
         public string publisherMatch = "";
         public string themeMatch = "";
         public string genreMatch = "";
         public string platformMatch = "";
+        public string rankMatch = "";
     }
 
     public class Results
@@ -408,9 +419,10 @@
 
     public async Task GetRandomGame()
     {
-        int randomGameId = random.Next(1, 131);
+        rankRandomGame = random.Next(0, 229);
         var data = new Data();
-        randomGameId = data.gameIds[randomGameId];
+        int randomGameId = data.gameIds[rankRandomGame];
+        rankRandomGame++;
 
         try
         {
@@ -430,7 +442,7 @@
         }
         catch (Exception e)
         {
-            DisplayError(true, "emoji-frown", "Error retrieving game, Please try again later.");
+            DisplayError(true, "emoji-frown", "Error retrieving game, Please try again later." + e.Message);
             StateHasChanged();
             return;
         }
@@ -498,6 +510,7 @@
         }
         catch (Exception e)
         {
+            DisplayError(true, "emoji-frown", "Error searching games, Please try again later." + e.Message);
             return;
         }
     }
@@ -544,7 +557,7 @@
             CompareGuessToGame(gameResult);
         } catch(Exception e)
         {
-            DisplayError(true, "emoji-frown", "Error retrieving game, Please try again later.");
+            DisplayError(true, "emoji-frown", "Error retrieving game, Please try again later." + e.Message);
             StateHasChanged();
             return;
         }
@@ -559,10 +572,11 @@
             {
                 if (gameGuess != null)
                 {
+                    gameGuess.yearIcon = "";
                     gameGuess.yearMatch = "text-bg-success";
                 }
-            } else if (Int32.Parse(randomGame?.results?.original_release_date?.Substring(0, 4) ?? "0") - Int32.Parse(gameGuess?.results?.original_release_date?.Substring(0, 4) ?? "0") >= -3 &&
-                     Int32.Parse(randomGame?.results?.original_release_date?.Substring(0, 4) ?? "0") - Int32.Parse(gameGuess?.results?.original_release_date?.Substring(0, 4) ?? "0") <= 3)
+            } else if (Int32.Parse(randomGame?.results?.original_release_date?.Substring(0, 4) ?? "0") - Int32.Parse(gameGuess?.results?.original_release_date?.Substring(0, 4) ?? "0") >= -5 &&
+                     Int32.Parse(randomGame?.results?.original_release_date?.Substring(0, 4) ?? "0") - Int32.Parse(gameGuess?.results?.original_release_date?.Substring(0, 4) ?? "0") <= 5)
             {
                 if (gameGuess != null) 
                 {
@@ -573,6 +587,19 @@
                 if (gameGuess != null) 
                 {
                     gameGuess.yearMatch = "";
+                }
+            }
+
+            if (gameGuess != null) 
+            {
+                if (gameGuess.results?.original_release_date != null && randomGame?.results?.original_release_date != null &&
+                    int.Parse(gameGuess.results.original_release_date.Substring(0, 4)) > int.Parse(randomGame.results.original_release_date.Substring(0, 4)))
+                {
+                    gameGuess.yearIcon = "bi bi-caret-down";
+                } else if (gameGuess.results?.original_release_date != null && randomGame?.results?.original_release_date != null &&
+                    int.Parse(gameGuess.results.original_release_date.Substring(0, 4)) < int.Parse(randomGame.results.original_release_date.Substring(0, 4)))
+                {
+                    gameGuess.yearIcon = "bi bi-caret-up";
                 }
             }
     
@@ -684,6 +711,39 @@
                     }
                 }
             }
+
+            var data = new Data();
+            if (gameGuess != null && gameGuess.results?.guid != null)
+            {
+                gameGuess.rank = (Array.FindIndex(data.gameIds, id => id == Int32.Parse(gameGuess.results.guid.Substring(5))) + 1).ToString();
+                if (gameGuess.rank != "0") 
+                {
+                    if (rankRandomGame == int.Parse(gameGuess.rank))
+                    {
+                        gameGuess.rankIcon = "";
+                        gameGuess.rankMatch = "text-bg-success";
+                    } else if (rankRandomGame - int.Parse(gameGuess.rank) >= -50 && rankRandomGame - int.Parse(gameGuess.rank) <= 50)
+                    {
+                        gameGuess.rankMatch = "text-bg-warning";
+                    } else
+                    {
+                        gameGuess.rankMatch = "";
+                    }
+
+                    if (int.Parse(gameGuess.rank) < rankRandomGame)
+                    {
+                        gameGuess.rankIcon = "bi bi-caret-down";
+                    } else if (int.Parse(gameGuess.rank) > rankRandomGame)
+                    {
+                        gameGuess.rankIcon = "bi bi-caret-up";
+                    }
+                } else
+                {
+                    gameGuess.rankIcon = "bi bi-caret-up";
+                    gameGuess.rank = "250+";
+                }
+            }
+
             if (gameGuess != null) 
             {
                 CheckWin(gameGuess);
